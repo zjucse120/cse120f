@@ -33,6 +33,7 @@ public:
     ~AddrSpace();			// De-allocate an address space
 	
     int Translate(int virtaddr);
+    bool ReadMem(int addr, int size, int *value);
     void InitRegisters();		// Initialize user-level CPU registers,
     // before jumping to user code
     unsigned int numberPages() {return numPages;}

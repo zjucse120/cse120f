@@ -68,7 +68,7 @@ AddrSpace::Initialize(OpenFile *executable)
     int data_file_off, data_virt_addr, data_size, data_size_load;*/
 
     Executable = executable;
-    executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
+    Executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) &&
             (WordToHost(noffH.noffMagic) == NOFFMAGIC))
         SwapHeader(&noffH);
@@ -205,13 +205,13 @@ AddrSpace::Initialize(OpenFile *executable)
 void
 AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
 {
-    //unsigned int i;
         
     int code_pn, code_virt_addr, code_file_off, code_size;
-        
     int data_pn, data_file_off, data_virt_addr, data_size;
     
-    code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;    
+    code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;
+    data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;
+
     if(code_pn >= badvpn){
         if (noffH.code.size > 0) {
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
@@ -239,13 +239,12 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 code_virt_addr = PageSize * badvpn ;
                 code_size = (noffH.code.virtualAddr + noffH.code.size) % PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
-		memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize + code_size]),0, sizeof(PageSize-code_size));		
+		memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize + code_size]),0, sizeof(PageSize-code_size));
             }
         }
     }
 
-    data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;    
-    if(data_pn >= badvpn && badvpn >= code_pn){
+    if((data_pn >= badvpn) && (badvpn >= code_pn)){
         if (noffH.initData.size > 0) {
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
                     noffH.initData.virtualAddr, noffH.initData.size);
@@ -272,15 +271,17 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 data_virt_addr = PageSize * badvpn ;
                 data_size = (noffH.initData.virtualAddr + noffH.initData.size) % PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
-		memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize + data_size]),0, sizeof(PageSize-data_size));		
+		memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize + data_size]),0, sizeof(PageSize-data_size));
             }
         }
     }
         
            if ((noffH.initData.virtualAddr + noffH.initData.size)/PageSize < badvpn){
-         	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));	
+         	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
                    }
-
+//    else{
+//        memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
+//    }
         
 }
 
@@ -323,9 +324,50 @@ AddrSpace::~AddrSpace()
 	mmu->FreePage(pageTable[i].physicalPage);
     }
     delete [] pageTable;
+    delete  Executable;
 
 }
 
+//---------------------------------------------------------------------
+//
+//----------------------------------------------------------------------
+bool
+AddrSpace::ReadMem(int addr, int size, int *value)
+{
+    int data;
+    ExceptionType exception;
+    int physicalAddress;
+
+    DEBUG('a', "Reading VA 0x%x, size %d\n", addr, size);
+
+    exception = machine->Translate(addr, &physicalAddress, size, FALSE);
+    if ((exception != NoException) && (exception != PageFaultException)) {
+        machine->RaiseException(exception, addr);
+        return FALSE;
+    }
+    switch (size) {
+    case 1:
+        data = machine->mainMemory[physicalAddress];
+        *value = data;
+        break;
+
+    case 2:
+        data = *(unsigned short *) &machine->mainMemory[physicalAddress];
+        *value = ShortToHost(data);
+        break;
+
+    case 4:
+        data = *(unsigned int *) &machine->mainMemory[physicalAddress];
+        *value = WordToHost(data);
+        break;
+
+    default:
+        ASSERT(FALSE);
+    }
+
+    DEBUG('a', "\tvalue read = %8.8x\n", *value);
+    return (TRUE);
+}
 //----------------------------------------------------------------------
 //translate the virtualAddress to the physicalAddress
 //----------------------------------------------------------------------
@@ -339,11 +381,11 @@ AddrSpace::Translate(int virtAddr)
 
     vpn = (unsigned) virtAddr / PageSize;
     offset = (unsigned) virtAddr % PageSize;
-    if (vpn >= numPages) {
-            return AddressErrorException;
-       } else if (!pageTable[vpn].valid) {
-            return PageFaultException;
-        }
+//    if (vpn >= numPages) {
+//            return AddressErrorException;
+//       } else if (!pageTable[vpn].valid) {
+//            return PageFaultException;
+//        }
         entry = &pageTable[vpn];
 
     pageFrame = entry->physicalPage;

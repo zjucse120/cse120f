@@ -178,7 +178,7 @@ void Exit_Handler(){
           pid = currentThread->GetPid();
           printf("Exit value is %d\n", value); 
           space->~AddrSpace();
-          pt->Release(pid); 
+          pt->Release(pid);
           currentThread->Finish();
           AdjustPC();
 }
@@ -207,14 +207,15 @@ void Exec_Handler(){
 int ReadFile(char *buff, int address, int length, int numpage){
     int i;
     int value;
-
+    AddrSpace *space;
+    space = currentThread->space;
     for(i = 0;i < length;i++,address++){
         
         if(address < 0 || address >= numpage*length){
             printf("Invalid string filename\n");
             return false;
         }
-        if(!machine->ReadMem(address,1,&value)){
+        if(!(space->ReadMem(address,1,&value))){
             printf("Read memory fails\n");
             return false;
         }
@@ -266,7 +267,7 @@ Exec(char *filename){
        thread->space = space;
        pid = pt->Alloc(thread);
       if(pid == 0){
-           delete executable;
+           //delete executable;
            delete thread;
            printf("sorry, I run out of process tables\n"); 
            return 0;  
@@ -274,14 +275,14 @@ Exec(char *filename){
       else{
            thread->SetPid(pid);
            printf("The thread with pid of %d is going to run\n", pid); 
-           delete executable;	
+           //delete executable;
            thread->Fork(ProcessStart,0);
            return pid;
            }
 
      }
     else  { 
-        delete executable;	
+        //delete executable;
         return 0;
     }
    }
