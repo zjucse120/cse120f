@@ -18,7 +18,6 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
-#include "noff.h"
 
 
 //#ifndef _MEMORYMANAGER_H_
@@ -62,14 +61,13 @@ SwapHeader (NoffHeader *noffH)
 int
 AddrSpace::Initialize(OpenFile *executable)
 {
-    NoffHeader noffH;
     unsigned int i;
     unsigned int size;
-    int code_file_off, code_virt_addr, code_size, code_size_load;
+ /*   int code_file_off, code_virt_addr, code_size, code_size_load;
 
-    int data_file_off, data_virt_addr, data_size, data_size_load;
+    int data_file_off, data_virt_addr, data_size, data_size_load;*/
 
-
+    Executable = executable;
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) &&
             (WordToHost(noffH.noffMagic) == NOFFMAGIC))
@@ -103,14 +101,14 @@ AddrSpace::Initialize(OpenFile *executable)
         pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
         //pageTable[i].physicalPage = i;
         pageTable[i].physicalPage = mmu->AllocPage();// now, allocate the phys page
-        pageTable[i].valid = TRUE;
+        pageTable[i].valid = FALSE;
         pageTable[i].use = FALSE;
         pageTable[i].dirty = FALSE;
         pageTable[i].readOnly = FALSE;  // if the code segment was entirely on
         // a separate page, we could set its
         // pages to be read-only
     }
-
+/*
 // zero out the entire address space, to zero the unitialized data segment
 // and the stack segment
    // bzero(machine->mainMemory, size);
@@ -196,10 +194,104 @@ AddrSpace::Initialize(OpenFile *executable)
 		executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
 	}         
 
-}
+}*/
   return true;
 }
-	
+
+    
+//----------------------------------------------------------------------
+//
+//----------------------------------------------------------------------
+void
+AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
+{
+    //unsigned int i;
+        
+    int code_pn, code_virt_addr, code_file_off, code_size;
+        
+    int data_pn, data_file_off, data_virt_addr, data_size;
+    
+    code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;    
+    if(code_pn >= badvpn){
+        if (noffH.code.size > 0) {
+            DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
+                    noffH.code.virtualAddr, noffH.code.size);
+                
+            //if the address begin at the middle of the page
+            if (noffH.code.virtualAddr/PageSize == badvpn){
+		code_virt_addr = noffH.code.virtualAddr;                    
+                code_size = PageSize - noffH.code.virtualAddr % PageSize;
+                code_file_off = noffH.code.inFileAddr;    
+                executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
+            }
+                
+            //if the address both begin and end at boundries
+            else if (code_pn > badvpn){
+                code_file_off = noffH.code.inFileAddr + PageSize * badvpn ;
+                code_virt_addr = PageSize * badvpn ;
+                code_size = PageSize;
+                executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
+            }
+                
+            //if the address does not end at the boundry
+           else if (code_pn == badvpn){
+                code_file_off = noffH.code.inFileAddr + PageSize * badvpn ;
+                code_virt_addr = PageSize * badvpn ;
+                code_size = (noffH.code.virtualAddr + noffH.code.size) % PageSize;
+                executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
+		memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize + code_size]),0, sizeof(PageSize-code_size));		
+            }
+        }
+    }
+
+    data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;    
+    if(data_pn >= badvpn && badvpn >= code_pn){
+        if (noffH.initData.size > 0) {
+            DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
+                    noffH.initData.virtualAddr, noffH.initData.size);
+                
+            //if the address begin at the middle of the page
+            if (noffH.initData.virtualAddr/PageSize == badvpn){
+		data_virt_addr = noffH.initData.virtualAddr;                    
+                data_size = PageSize - noffH.initData.virtualAddr % PageSize;
+                data_file_off = noffH.initData.inFileAddr;    
+                executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
+            }
+                
+            //if the address both begin and end at boundries
+            else if (data_pn > badvpn){
+                data_file_off = noffH.initData.inFileAddr + PageSize * badvpn ;
+                data_virt_addr = PageSize * badvpn ;
+                data_size = PageSize;
+                executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
+            }
+                
+            //if the address does not end at the boundry
+           else if (data_pn == badvpn){
+                data_file_off = noffH.initData.inFileAddr + PageSize * badvpn ;
+                data_virt_addr = PageSize * badvpn ;
+                data_size = (noffH.initData.virtualAddr + noffH.initData.size) % PageSize;
+                executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
+		memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize + data_size]),0, sizeof(PageSize-data_size));		
+            }
+        }
+    }
+        
+           if ((noffH.initData.virtualAddr + noffH.initData.size)/PageSize < badvpn){
+         	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));	
+                   }
+
+        
+}
+
+//
+//
+//----------------------------------------------------------------------
+void
+AddrSpace::MarkPage(int badvpn){
+        pageTable[badvpn].valid = TRUE;
+}
+
 //----------------------------------------------------------------------
 // AddrSpace::AddrSpace
 // 	Create an address space to run a user program.

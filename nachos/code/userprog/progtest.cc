@@ -45,7 +45,7 @@ StartProcess(char *filename)
     mainpid = pt->Alloc(currentThread);
     currentThread->SetPid(mainpid);
 
-    delete executable;			// close file
+//    delete executable;			// close file
 
     space->InitRegisters();		// set the initial register values
     space->RestoreState();		// load page table register

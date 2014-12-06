@@ -67,6 +67,8 @@ void Read_Handler();
 void Write_Handler();
 void Join_Handler();
 
+void PageFault_Handler();
+
 SpaceId Exec(char *filename);
 int ReadFile(char *buff, int address, int length, int numpage);
 
@@ -88,7 +90,7 @@ ExceptionHandler(ExceptionType which){
             break;
        case PageFaultException:
             printf("No valid translation found.\n");
-            Exit_Handler();
+            PageFault_Handler();
             break;
        case ReadOnlyException: 
             printf("Write attempted to page marked 'read-only'.\n");
@@ -361,6 +363,19 @@ void Yield_Handler() {
         currentThread->Yield();
         currentThread->RestoreUserState();
         AdjustPC();
+}
+
+void
+PageFault_Handler(){
+    int badVaddr, vmIndex;
+    AddrSpace *space;
+    space = currentThread->space;
+
+    badVaddr = machine->ReadRegister(39);
+    vmIndex = badVaddr/PageSize;
+    space->DemandSpace(space->Executable, vmIndex);
+    space->MarkPage(vmIndex); 
+    
 }
 
 void CopyToUser(char *FromKernelAddr, int NumBytes, int ToUserAddr){
