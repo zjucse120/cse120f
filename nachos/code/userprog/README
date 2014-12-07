@@ -1,0 +1,59 @@
+Member:
+
+Busheng Lou A53080746
+Tianqi Chen A53079580
+Ziqian Xu A53081116
+Kaiyue Yang A53081576
+1. 
+AddrSpace: 1) Look in the executable header to figure out how large of an address
+space needs to be created for this process.2) Create a page table for as many pages are necessary to load the program into the address space.  The page table is represented as an
+array of TranslationEntries (PTEs) indexed by virtual page number.  A physical page is allocated for each virtual page. 3) Zero out the pages allocated for the address space.
+4) Load the code and page sections from the executable file for the program into the pages allocated for the address space.
+We created the Initialize method to Initiallize the addrspace and return error if the size of the code is too large.
+array.c: if the file can be run, then Initialize should be right.
+2.  For the exec part, there are two functions in exception.cc to implement this fucntion. 
+We implements processmanager.cc and processmanager.h in the userprog.
+First when a user level process call Exec, the operating system  will first intrigues a Exec_Handler() to  initialize the space for the system call and determine whether or not the filename is valid to implement execution function. The second part is Exec(filename) to initialize a new address space for the new progress to run the execution function in the kernel mode. So in this part, we need to new a thread and allocate a new address space to this thread, find the appropriate spaceid to identify the thread and fork a new thread.
+We change thread class to store the pid by Setpid() and get the pid of thread using Getpid().
+Finally, we increase PC by 4.
+Test for Exec():
+exectest1: test the basic function of Exec() with one execution of another user level progress;
+exectest2: test the function of Exec() with multiple execution. 
+exectest3: test when the filename is not exit, it will print “the filename does not exist”
+exectest4: test when the filename span across different physical pages. With two long filenames, the second Exec() will print ” "The virtual address across the boundary”
+Outofmemory1 test the case when too many threads needed to be executed, when we don’t yield to the next thread, it will not release the memory.
+Outofmemory2 test the case when numPages larger than NumPages of physical memory.
+Releasememory file: it add a long for loop between two execs, it will give time for threads to exit and then release the addrspace.     
+
+
+Exit_Handler(): 1)Destroy current thread. 2)Delete address space. 3)Release SpaceID. 4)Print out status value. 5)If current thread is the last thread, the program is destroyed.
+Test for Exit():
+     exittest: test the Exit system call with status value=123.
+3. For the third part, we need to pass arguments as argc and argv into the child progress. For this part, we change the code of SpaceId Exec(char *filename, int argc, char **argv, int willJoin) and  int Initialize(OpenFile *executable, int argc, char** argv) to create the address space for the arguments. But there is a segment fault everytime. We do not konw why. The code is in addrspace1.cc and exception1.cc. I hope you can help with us.
+ 
+The test is exectest5.c and exectest6.c
+
+
+
+  
+We implement the class Synconsole.h and Synconsole.cc in the userprog. We initialize the Synconsole in the progtest.cc.
+Read and Write are used to for I/O input and output. When the fd argument is  not consoleinput and consoleoutput, it will return error.
+echo.c: we used echo.c to test the Read and Write, if I write a string , it will show in the terminal.
+snake.c: first we changed the NumPhyPages to 40 for the snake.c to load. When the head of the snake come to a place of the screen, it will clean the screen. 
+5. 
+ExceptionHandler(): handle user program exceptions that are not system calls.
+Test for ExceptionHandler():
+AddressErrorException() test the address error exception.
+IllegalInstrException() test the illegal instruction exception.
+6. For the Join system call, when willjoin is”1”, it will call Join_Handler, then it will call  the thread->join(), If Join succeeded, it will return 0; when error, it will return -65535.
+7. We have implemented the BoundedBuffer Class for the pipe.
+8.  
+     Fork_Handler(): allow a user program to fork a thread to call a routine in the same address space.
+      Yield_Handler(): yield a user-level thread.
+      pingpongtest: test of a user program using system calls to ping-pong between threads.
+          
+
+
+Summary()
+Everyone in our group contributed to the project. Busheng Lou and Kaiyue Yang take part in 1,2,4,6,7.  Tianqi Chen takes part in 2,5,8. Ziqian Xu takes part in 2 and 3.
+
