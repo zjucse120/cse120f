@@ -227,7 +227,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address both begin and end at boundries
             else if (code_pn > badvpn){
-                code_file_off = noffH.code.inFileAddr + PageSize * badvpn ;
+                code_file_off = noffH.code.inFileAddr + PageSize * badvpn - noffH.code.virtualAddr;
                 code_virt_addr = PageSize * badvpn ;
                 code_size = PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
@@ -235,7 +235,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address does not end at the boundry
            else if (code_pn == badvpn){
-                code_file_off = noffH.code.inFileAddr + PageSize * badvpn ;
+                code_file_off = noffH.code.inFileAddr + PageSize * badvpn - noffH.code.virtualAddr;
                 code_virt_addr = PageSize * badvpn ;
                 code_size = (noffH.code.virtualAddr + noffH.code.size) % PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
@@ -259,7 +259,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address both begin and end at boundries
             else if (data_pn > badvpn){
-                data_file_off = noffH.initData.inFileAddr + PageSize * badvpn ;
+                data_file_off = noffH.initData.inFileAddr + PageSize * badvpn - noffH.initData.virtualAddr;
                 data_virt_addr = PageSize * badvpn ;
                 data_size = PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
@@ -267,7 +267,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address does not end at the boundry
            else if (data_pn == badvpn){
-                data_file_off = noffH.initData.inFileAddr + PageSize * badvpn ;
+                data_file_off = noffH.initData.inFileAddr + PageSize * badvpn - noffH.initData.virtualAddr;
                 data_virt_addr = PageSize * badvpn ;
                 data_size = (noffH.initData.virtualAddr + noffH.initData.size) % PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);

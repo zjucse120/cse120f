@@ -376,7 +376,6 @@ PageFault_Handler(){
     vmIndex = badVaddr/PageSize;
     space->DemandSpace(space->Executable, vmIndex);
     space->MarkPage(vmIndex); 
-    
 }
 
 void CopyToUser(char *FromKernelAddr, int NumBytes, int ToUserAddr){
