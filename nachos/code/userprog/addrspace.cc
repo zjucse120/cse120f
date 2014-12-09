@@ -276,7 +276,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
         }
     }
         
-           if ((noffH.initData.virtualAddr + noffH.initData.size)/PageSize < badvpn){
+           if (data_pn < badvpn){
          	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
                    }
 //    else{
@@ -291,7 +291,6 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
 void
 AddrSpace::MarkPage(int badvpn){
         pageTable[badvpn].valid = TRUE;
-}
 
 //----------------------------------------------------------------------
 // AddrSpace::AddrSpace
