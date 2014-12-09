@@ -223,18 +223,19 @@ int ReadFile(char *buff, int address, int length, int numpage){
         buff[i] = value;
         if(buff[i] == '\0')
             break;
-        }
- 
-        if(i == length) {
-            printf("The filename is too long to execute\n");
-            return false;
-        }
-        
         if(machine->ReadRegister(4)%length + i > 128){
             printf("The virtual address across the boundary\n");
             return false;
         }
-        return true;
+    }
+ 
+    if(i == length) {
+        printf("The filename is too long to execute\n");
+        return false;
+        }
+        
+        
+    return true;
 }
  
 SpaceId 
