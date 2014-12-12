@@ -38,14 +38,14 @@ StartProcess(char *filename)
         return;
     }
     
-    space = new AddrSpace(executable);   
-    ASSERT(space->Initialize(executable));
+    space = new AddrSpace(executable); 
+    if(space->Initialize(executable));
  
     currentThread->space = space;
     mainpid = pt->Alloc(currentThread);
     currentThread->SetPid(mainpid);
 
-//    delete executable;			// close file
+ //    delete executable;			// close file
 
     space->InitRegisters();		// set the initial register values
     space->RestoreState();		// load page table register

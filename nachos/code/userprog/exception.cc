@@ -72,6 +72,7 @@ void PageFault_Handler();
 SpaceId Exec(char *filename);
 int ReadFile(char *buff, int address, int length, int numpage);
 
+void Evict(AddrSpace *as);
 void CopyToUser(char *FromKernelAddr, int NumBytes, int ToUserAddr);
 void CopyToKernel(int FromUserAddr, int NumBytes, char *ToKernelAddr);
 void ProcessStart(int a);
@@ -89,7 +90,7 @@ ExceptionHandler(ExceptionType which){
             SystemCall(type,which);
             break;
        case PageFaultException:
-            printf("No valid translation found.\n");
+            //printf("No valid translation found.\n");
             PageFault_Handler();
             break;
        case ReadOnlyException: 
@@ -366,14 +367,20 @@ void Yield_Handler() {
 
 void
 PageFault_Handler(){
-    int badVaddr, vmIndex;
+    int badVaddr, vmIndex, victnum;
     AddrSpace *space;
     space = currentThread->space;
 
     badVaddr = machine->ReadRegister(39);
     vmIndex = badVaddr/PageSize;
-    space->DemandSpace(space->Executable, vmIndex);
+
+    if(space->DemandSpace(space->Executable, vmIndex))
     space->MarkPage(vmIndex); 
+    else{
+    space->Evict();
+    if(space->DemandSpace(space->Executable, vmIndex))
+    space->MarkPage(vmIndex); 
+    }  
 }
 
 void CopyToUser(char *FromKernelAddr, int NumBytes, int ToUserAddr){

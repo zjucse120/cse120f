@@ -17,13 +17,14 @@
 #include "filesys.h"
 #include "noff.h"
 
-
 #define UserStackSize		1024 	// increase this as necessary!
+
+class BackingStore;
 
 class AddrSpace {
 public:
     int Initialize(OpenFile *executable);
-    void DemandSpace(OpenFile *executable, int badvpn);
+    bool DemandSpace(OpenFile *executable, int badvpn);
     OpenFile *Executable;
     NoffHeader noffH;
     void MarkPage(int badvpn); 
@@ -43,16 +44,39 @@ public:
     //unsigned int size;
     // address space
    // NoffHeader noffH;
+    TranslationEntry* GetPTE(int pageNum){
+	return &pageTable[pageNum];}
+    int GetPTEpageNum(TranslationEntry *PTE);
+    int GetpageNum();
     void newPageTable();
+    void Evict();
 private:
     TranslationEntry *pageTable;	// Assume linear page table translation
     // for now!
     TranslationEntry *newTable;
-    
+    BackingStore *bstore;
+ 
+};
 
 
-  
+class BackingStore{
+
+public:
+
+BackingStore(AddrSpace *as);
+
+void PageOut(TranslationEntry *pte);
+
+void PageIn(TranslationEntry *pte);
+     
+AddrSpace* space;
+
+private:
+       FileSystem* BSFile;
+       char filename[16];
 
 };
+
+
 
 #endif // ADDRSPACE_H

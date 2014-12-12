@@ -19,19 +19,14 @@
 #include "system.h"
 #include "addrspace.h"
 
-
-//#ifndef _MEMORYMANAGER_H_
-//#define _MEMORYMANAGER_H_
 #include "memorymanager.h"
-//#endif
-//#include "memorymanager.h"
 #ifdef HOST_SPARC
 #include <strings.h>
-//#include "memorymanager.h"
 #endif
 
 
 extern MemoryManager *mmu;
+class BackingStore;
 //----------------------------------------------------------------------
 // SwapHeader
 // 	Do little endian to big endian conversion on the bytes in the
@@ -63,6 +58,7 @@ AddrSpace::Initialize(OpenFile *executable)
 {
     unsigned int i;
     unsigned int size;
+    bstore =  new BackingStore(this);
  /*   int code_file_off, code_virt_addr, code_size, code_size_load;
 
     int data_file_off, data_virt_addr, data_size, data_size_load;*/
@@ -92,7 +88,7 @@ AddrSpace::Initialize(OpenFile *executable)
 //if the numPages needed larger than NumePages can be used?
    if ((int)numPages >( mmu->NumPagesCanBeUsed())){
 	printf("No enough memory!\n");
-	return false;
+	//return false;
 	}
 
 // first, set up the translation
@@ -100,8 +96,9 @@ AddrSpace::Initialize(OpenFile *executable)
     for (i = 0; i < numPages; i++) {
         pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
         //pageTable[i].physicalPage = i;
-        pageTable[i].physicalPage = mmu->AllocPage();// now, allocate the phys page
+        //pageTable[i].physicalPage = mmu->AllocPage();// now, allocate the phys page
         pageTable[i].valid = FALSE;
+        pageTable[i].stored = FALSE;
         pageTable[i].use = FALSE;
         pageTable[i].dirty = FALSE;
         pageTable[i].readOnly = FALSE;  // if the code segment was entirely on
@@ -202,13 +199,27 @@ AddrSpace::Initialize(OpenFile *executable)
 //----------------------------------------------------------------------
 //
 //----------------------------------------------------------------------
-void
+bool
 AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
 {
         
     int code_pn, code_virt_addr, code_file_off, code_size;
     int data_pn, data_file_off, data_virt_addr, data_size;
+
+// first, set up the translation
+    int n;
+	n = mmu->AllocPage();
+    if(n==-1){
+        return false;
+    }
+    else{
+        pageTable[badvpn].physicalPage = n;// now, allocate the phys page
+// if the code segment was entirely on
+        // a separate page, we could set its
+        // pages to be read-only
+    }
     
+   if(!pageTable[badvpn].stored){
     code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;
     data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;
 
@@ -279,10 +290,13 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
            if (data_pn < badvpn){
          	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
                    }
+    }
+    else 
+	bstore->PageIn(&pageTable[badvpn]);
 //    else{
 //        memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
 //    }
-        
+    return true;    
 }
 
 //
@@ -291,7 +305,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
 void
 AddrSpace::MarkPage(int badvpn){
         pageTable[badvpn].valid = TRUE;
-
+}
 //----------------------------------------------------------------------
 // AddrSpace::AddrSpace
 // 	Create an address space to run a user program.
@@ -457,4 +471,81 @@ void AddrSpace::RestoreState()
     machine->pageTableSize = numPages;
 }
 
+//---------------------------------
+//return pageNum for PTE
+//---------------------------------
+int 
+AddrSpace::GetPTEpageNum(TranslationEntry *PTE){
+      for(int i = 0;i<numPages;i++)
+      {
 
+      if (PTE == &pageTable[i])
+      return i;
+      }
+      return -1;
+}
+//------------------------------------
+//return pageNum
+//-------------------------------------
+int 
+AddrSpace::GetpageNum(){
+     return numPages;
+}
+//-----------------------------------------
+// evit page
+//
+//----------------------------------------
+void
+AddrSpace::Evict(){
+      int i=0;
+while(!pageTable[i].valid)
+{
+  i++;
+}
+    pageTable[i].valid = FALSE;
+    TranslationEntry *pte;
+    pte = GetPTE(i);
+    if(pageTable[i].dirty)
+    {
+      bstore->PageOut(pte);
+      pageTable[i].dirty = FALSE; 
+      pageTable[i].stored = TRUE;   
+    }
+    mmu->FreePage(pageTable[i].physicalPage); 
+    
+}
+
+BackingStore::BackingStore(AddrSpace *as)
+{   int numpages;
+    space = as;
+    int pid = currentThread->GetPid();// string which will contain the number
+    sprintf ( filename, "%d", pid); // %d makes the result be a decimal integer
+    BSFile = new FileSystem(true);
+    numpages = space->GetpageNum();
+    ASSERT(BSFile->Create(filename,numpages*PageSize));
+}
+
+
+void
+BackingStore::PageOut(TranslationEntry *pte)
+{
+   
+    int pagenum;
+    int phys_addr;
+    pagenum = space->GetPTEpageNum(pte);
+    phys_addr = space->Translate(pagenum*PageSize);
+    OpenFile *BSExec = BSFile->Open(filename);
+    BSExec->WriteAt(&machine->mainMemory[phys_addr], PageSize, pagenum*PageSize);
+}
+
+
+void
+BackingStore::PageIn(TranslationEntry *pte)
+{
+     int pagenum;
+     int phys_addr;
+     pagenum = space->GetPTEpageNum(pte);
+     phys_addr = space->Translate(pagenum*PageSize);
+     OpenFile *BSExec = BSFile->Open(filename);
+     BSExec->ReadAt(&machine->mainMemory[phys_addr], PageSize, pagenum*PageSize);
+}
