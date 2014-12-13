@@ -18,7 +18,7 @@
 #include "noff.h"
 #include "stats.h"
 
-#define UserStackSize		4048 	// increase this as necessary!
+#define UserStackSize		1024 	// increase this as necessary!
 
 extern Statistics *stats;
 class BackingStore;

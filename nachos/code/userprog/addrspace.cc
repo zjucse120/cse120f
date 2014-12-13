@@ -225,11 +225,11 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
    if(!pageTable[badvpn].stored){
     code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;
     data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;
-   
-  if(badvpn <= code_pn || badvpn <= data_pn){
-	    stats->numPageIns ++ ;	    	
+       
+  // if(badvpn <= code_pn || badvpn <= data_pn){
+//	    stats->numPageIns ++ ;	    	
     if(code_pn >= badvpn){
-        if (noffH.code.size > 0) {	
+         if (noffH.code.size > 0) {	
 	    //stats->numPageIns ++ ;
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
                     noffH.code.virtualAddr, noffH.code.size);
@@ -244,12 +244,12 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address both begin and end at boundries
             else if (code_pn > badvpn){
-                if(code_pn < data_pn || (badvpn>=data_pn)){
+                //if(code_pn < data_pn || (badvpn>=data_pn)){
                 code_file_off = noffH.code.inFileAddr + PageSize * badvpn - noffH.code.virtualAddr;
                 code_virt_addr = PageSize * badvpn ;
                 code_size = PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
-                }
+               // }
              }
                         
             //if the address does not end at the boundry
@@ -263,7 +263,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
         }
     }
 
-    if((data_pn >= badvpn)){
+    if((data_pn >= badvpn)&&(badvpn >= code_pn)){
         if (noffH.initData.size > 0) {		
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
                     noffH.initData.virtualAddr, noffH.initData.size);
@@ -278,12 +278,12 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address both begin and end at boundries
             else if (data_pn > badvpn){
-                if((data_pn < code_pn) || (badvpn >= code_pn)){    
+                //if((data_pn < code_pn) || (badvpn >= code_pn)){    
                 data_file_off = noffH.initData.inFileAddr + PageSize * badvpn - noffH.initData.virtualAddr;
                 data_virt_addr = PageSize * badvpn ;
                 data_size = PageSize;
                 executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
-                }
+                //}
              }
                 
             //if the address does not end at the boundry
@@ -296,7 +296,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
             }
         }
     }
-    }    
+ //   }    
            else if (data_pn < badvpn){
          	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
                    }
@@ -306,9 +306,6 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
 	bstore->PageIn(&pageTable[badvpn]);
 	stats->numPageIns ++ ;
 	}
-//    else{
-//        memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
-//    }
     return true;    
 }
 
@@ -561,5 +558,5 @@ BackingStore::PageIn(TranslationEntry *pte)
      int phys_addr;
      pagenum = space->GetPTEpageNum(pte);
      phys_addr = space->Translate(pagenum*PageSize);
-        BSExec->ReadAt(&machine->mainMemory[phys_addr], PageSize, pagenum*PageSize);
+     BSExec->ReadAt(&machine->mainMemory[phys_addr], PageSize, pagenum*PageSize);
 }
