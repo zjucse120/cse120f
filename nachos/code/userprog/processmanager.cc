@@ -11,6 +11,8 @@ ProcessTable::ProcessTable(int size){
      bitmap = new BitMap(size);
      Pcb = new PCB[size];
      pm_lock = new Lock("pm lock");
+     FIFOlist = new List;
+
 }
 
 int
@@ -36,6 +38,18 @@ ProcessTable::Release(int index){
       pm_lock->Acquire();
       bitmap->Clear(index-1);
       pm_lock->Release();
+}
+void
+ProcessTable::PageStore(TranslationEntry *pte)
+{
+//DEBUG('t', "Putting thread %s on ready list.\n", thread->getName());
+FIFOlist->Append((void *)pte);
+}
+
+TranslationEntry *
+ProcessTable::Evict()
+{
+return (TranslationEntry *)FIFOlist->Remove();
 }
 
 /* PROCESSMANAGER_H_*/

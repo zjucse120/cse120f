@@ -76,6 +76,7 @@ AddrSpace* space;
 private:
        FileSystem* BSFile;
        char filename[16];
+       OpenFile *BSExec;
 
 };
 

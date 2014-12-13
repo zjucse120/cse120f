@@ -90,7 +90,7 @@ ExceptionHandler(ExceptionType which){
             SystemCall(type,which);
             break;
        case PageFaultException:
-            //printf("No valid translation found.\n");
+            printf("No valid translation found.\n");
             PageFault_Handler();
             break;
        case ReadOnlyException: 
