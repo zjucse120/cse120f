@@ -226,9 +226,10 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
     code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;
     data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;
        
-  // if(badvpn <= code_pn || badvpn <= data_pn){
-//	    stats->numPageIns ++ ;	    	
-    if(code_pn >= badvpn){
+  if(badvpn <= code_pn || badvpn <= data_pn){
+	    stats->numPageIns ++ ;
+         DEBUG('a', "One pagein happened, %d total.\n",stats->numPageIns);	    	
+         if(code_pn >= badvpn){
          if (noffH.code.size > 0) {	
 	    //stats->numPageIns ++ ;
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
@@ -296,7 +297,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
             }
         }
     }
- //   }    
+}    
            else if (data_pn < badvpn){
          	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
                    }
@@ -305,6 +306,8 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
     else {
 	bstore->PageIn(&pageTable[badvpn]);
 	stats->numPageIns ++ ;
+        DEBUG('a', "One pagein happened, %d total.\n", stats->numPageIns);
+
 	}
     return true;    
 }
@@ -344,7 +347,9 @@ AddrSpace::~AddrSpace()
 {    
     unsigned int i;
     for (i = 0; i < numPages; i++){
+        if(pageTable[i].valid=true){
 	mmu->FreePage(pageTable[i].physicalPage);
+        }
     }
     delete [] pageTable;
     delete  Executable;
@@ -517,6 +522,7 @@ AddrSpace::Evict(){
     {
       bstore->PageOut(pte);
       stats->numPageOuts ++;
+      DEBUG('a', "One pageout happened, %d total.\n", stats->numPageOuts);
       printf("pageouts %d\n", stats->numPageOuts);
       pte->dirty = FALSE; 
       pte->stored = TRUE;   

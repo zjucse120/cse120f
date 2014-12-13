@@ -164,7 +164,7 @@ Interrupt::OneTick()
 
     if (stats->totalTicks < 0) {
 	printf("Reaching the end of time.\n");
-	ASSERT(FALSE);
+//	ASSERT(FALSE);
     }
 
     DEBUG('i', "\n== Tick %d ==\n", stats->totalTicks);
@@ -274,7 +274,7 @@ Interrupt::Schedule(VoidFunctionPtr handler, int arg, int fromNow, IntType type)
     int when = stats->totalTicks + fromNow; 
     if (when < stats->totalTicks || when < 0) {
 	printf("Reaching the end of time.\n");
-	ASSERT(FALSE);
+	//ASSERT(FALSE);
     }
 
     PendingInterrupt *toOccur = new PendingInterrupt(handler, arg, when, type);
