@@ -226,7 +226,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
     code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;
     data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;
        
-  if(badvpn <= code_pn){
+  if((badvpn <= code_pn) || (badvpn<= data_pn)){
 	    stats->numPageIns ++ ;
          DEBUG('a', "One pagein happened, %d total.\n",stats->numPageIns);	    	
          if(code_pn >= badvpn){
