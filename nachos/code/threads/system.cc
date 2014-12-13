@@ -171,6 +171,7 @@ Initialize(int argc, char **argv)
 void
 Cleanup()
 {
+    stats->Print();
     printf("\nCleaning up...\n");
 #ifdef NETWORK
     delete postOffice;

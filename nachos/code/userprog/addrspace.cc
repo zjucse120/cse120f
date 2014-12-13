@@ -18,7 +18,6 @@
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
-
 #include "memorymanager.h"
 #ifdef HOST_SPARC
 #include <strings.h>
@@ -27,6 +26,7 @@
 
 extern MemoryManager *mmu;
 class BackingStore;
+//Statistics *stats;
 //----------------------------------------------------------------------
 // SwapHeader
 // 	Do little endian to big endian conversion on the bytes in the
@@ -213,6 +213,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
         return false;
     }
     else{
+	stats->numPageFaults ++ ;
         pageTable[badvpn].physicalPage = n;// now, allocate the phys page
 // if the code segment was entirely on
         // a separate page, we could set its
@@ -224,12 +225,14 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
     data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;
 
     if(code_pn >= badvpn){
-        if (noffH.code.size > 0) {
+        if (noffH.code.size > 0) {	
+	    //stats->numPageIns ++ ;
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
                     noffH.code.virtualAddr, noffH.code.size);
                 
             //if the address begin at the middle of the page
             if (noffH.code.virtualAddr/PageSize == badvpn){
+	    stats->numPageIns ++ ;	    
 		code_virt_addr = noffH.code.virtualAddr;                    
                 code_size = PageSize - noffH.code.virtualAddr % PageSize;
                 code_file_off = noffH.code.inFileAddr;    
@@ -238,6 +241,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address both begin and end at boundries
             else if (code_pn > badvpn){
+	    stats->numPageIns ++ ;	    
                 code_file_off = noffH.code.inFileAddr + PageSize * badvpn - noffH.code.virtualAddr;
                 code_virt_addr = PageSize * badvpn ;
                 code_size = PageSize;
@@ -246,6 +250,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address does not end at the boundry
            else if (code_pn == badvpn){
+	        stats->numPageIns ++ ;	    
                 code_file_off = noffH.code.inFileAddr + PageSize * badvpn - noffH.code.virtualAddr;
                 code_virt_addr = PageSize * badvpn ;
                 code_size = (noffH.code.virtualAddr + noffH.code.size) % PageSize;
@@ -256,12 +261,13 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
     }
 
     if((data_pn >= badvpn) && (badvpn >= code_pn)){
-        if (noffH.initData.size > 0) {
+        if (noffH.initData.size > 0) {		
             DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
                     noffH.initData.virtualAddr, noffH.initData.size);
                 
             //if the address begin at the middle of the page
             if (noffH.initData.virtualAddr/PageSize == badvpn){
+	        stats->numPageIns ++ ;	    
 		data_virt_addr = noffH.initData.virtualAddr;                    
                 data_size = PageSize - noffH.initData.virtualAddr % PageSize;
                 data_file_off = noffH.initData.inFileAddr;    
@@ -270,6 +276,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address both begin and end at boundries
             else if (data_pn > badvpn){
+	        stats->numPageIns ++ ;	    
                 data_file_off = noffH.initData.inFileAddr + PageSize * badvpn - noffH.initData.virtualAddr;
                 data_virt_addr = PageSize * badvpn ;
                 data_size = PageSize;
@@ -278,6 +285,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
                 
             //if the address does not end at the boundry
            else if (data_pn == badvpn){
+	        stats->numPageIns ++ ;	    
                 data_file_off = noffH.initData.inFileAddr + PageSize * badvpn - noffH.initData.virtualAddr;
                 data_virt_addr = PageSize * badvpn ;
                 data_size = (noffH.initData.virtualAddr + noffH.initData.size) % PageSize;
@@ -290,9 +298,12 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
            if (data_pn < badvpn){
          	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
                    }
+
     }
-    else 
+    else {
 	bstore->PageIn(&pageTable[badvpn]);
+	stats->numPageIns ++ ;
+	}
 //    else{
 //        memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
 //    }
@@ -497,7 +508,8 @@ AddrSpace::GetpageNum(){
 //----------------------------------------
 void
 AddrSpace::Evict(){
-      int i=0;
+      int i=0;      
+
 while(!pageTable[i].valid)
 {
   i++;
@@ -508,6 +520,8 @@ while(!pageTable[i].valid)
     if(pageTable[i].dirty)
     {
       bstore->PageOut(pte);
+      stats->numPageOuts ++;
+//      printf("pageouts %d\n", stats->numPageOuts);
       pageTable[i].dirty = FALSE; 
       pageTable[i].stored = TRUE;   
     }

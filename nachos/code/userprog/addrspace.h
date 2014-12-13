@@ -16,9 +16,11 @@
 #include "copyright.h"
 #include "filesys.h"
 #include "noff.h"
+#include "stats.h"
 
 #define UserStackSize		1024 	// increase this as necessary!
 
+extern Statistics *stats;
 class BackingStore;
 
 class AddrSpace {

@@ -35,6 +35,8 @@ public:
     int numPageFaults;		// number of virtual memory page faults
     int numPacketsSent;		// number of packets sent over the network
     int numPacketsRecvd;	// number of packets received over the network
+    int numPageOuts;		// number of pageouts to the backing store
+    int numPageIns;		// number of pageins from backing store
 
     Statistics(); 		// initialize everything to zero
 
