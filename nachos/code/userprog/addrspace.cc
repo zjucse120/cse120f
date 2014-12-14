@@ -24,7 +24,9 @@
 #include <strings.h>
 #endif
 
-
+//char input[1] = {'1'};
+//char* a = input;
+int algorithm = 1;
 extern MemoryManager *mmu;
 extern ProcessTable *pt;
 extern MemoryStore *ms;
@@ -62,9 +64,7 @@ AddrSpace::Initialize(OpenFile *executable,int pid)
     unsigned int i;
     unsigned int size;
     bstore =  new BackingStore(this, pid);
- /*   int code_file_off, code_virt_addr, code_size, code_size_load;
 
-    int data_file_off, data_virt_addr, data_size, data_size_load;*/
 
     Executable = executable;
     Executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
@@ -108,93 +108,7 @@ AddrSpace::Initialize(OpenFile *executable,int pid)
         // a separate page, we could set its
         // pages to be read-only
     }
-/*
-// zero out the entire address space, to zero the unitialized data segment
-// and the stack segment
-   // bzero(machine->mainMemory, size);
-   for (i = 0; i < numPages; i++) {
-	memset(&(machine->mainMemory[pageTable[i].physicalPage*PageSize]),0,sizeof(PageSize));
-	
-   }
 
-// then, copy in the code and data segments into memory
-    if (noffH.code.size > 0) {
-        DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
-              noffH.code.virtualAddr, noffH.code.size);
-      //  executable->ReadAt(&(machine->mainMemory[noffH.code.virtualAddr]),
-      //                     noffH.code.size, noffH.code.inFileAddr);
-      code_size_load = noffH.code.size;
-      code_size = 0;
-      code_file_off = noffH.code.inFileAddr;
-      code_virt_addr = noffH.code.virtualAddr;
-	//if the address begin at the middle of the page
-      if ((noffH.code.virtualAddr % PageSize) != 0){
-    	     
-	        //code_file_off = noffH.code.inFileAddr;
-		//code_virt_addr = noffH.code.virtualAddr;	     
-		code_size = PageSize - noffH.code.virtualAddr % PageSize;
-	     if (code_size > code_size_load)
-                code_size = code_size_load;
-
-		code_size_load = noffH.code.size - code_size;		
-		executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
-		}
-
-	//if the address both begin and end at boundries
-     while (code_size_load >= PageSize ){
-		code_file_off = code_file_off + code_size ;
-		code_virt_addr = code_virt_addr + code_size ;
-		code_size = PageSize;		
-		executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
-                code_size_load = code_size_load - code_size;	
-	        }	
-	   
-	 //if the address does not end at the boundry
-     if (code_size_load > 0){
-		code_file_off = code_file_off + code_size;
-		code_virt_addr = code_virt_addr + code_size;
-		code_size = code_size_load;				
-		executable->ReadAt(&(machine->mainMemory[Translate(code_virt_addr)]), code_size, code_file_off);
-	}                
-    }
-
-	//load data segments
-    if (noffH.initData.size > 0) {
-        DEBUG('a', "Initializing data segment, at 0x%x, size %d\n",
-              noffH.initData.virtualAddr, noffH.initData.size);           
-      data_size_load = noffH.initData.size;
-      data_size = 0;
-      data_file_off = noffH.initData.inFileAddr;
-      data_virt_addr = noffH.initData.virtualAddr;
-
-      if ((noffH.initData.virtualAddr % PageSize) != 0){    	     
-		data_size = PageSize - noffH.initData.virtualAddr % PageSize;
-
-	     if (data_size > data_size_load)
-                data_size = data_size_load;
-
-		data_size_load = noffH.initData.size - data_size;		
-		executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
-		}
-
-	
-     while (data_size_load >= PageSize ){
-		data_file_off = data_file_off + data_size ;
-		data_virt_addr = data_virt_addr + data_size ;
-		data_size = PageSize;		
-		executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
-                data_size_load = data_size_load - data_size;	
-	        }	
-	   
-	 
-     if (data_size_load > 0){
-		data_file_off = data_file_off + data_size;
-		data_virt_addr = data_virt_addr + data_size;
-		data_size = data_size_load;
-		executable->ReadAt(&(machine->mainMemory[Translate(data_virt_addr)]), data_size, data_file_off);
-	}         
-
-}*/
   return true;
 }
 
@@ -220,9 +134,8 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
         TranslationEntry * pte;
         pte = &pageTable[badvpn];
         pageTable[badvpn].physicalPage = n;// now, allocate the phys page
-        //pt->PageStore(pte);
         ms->Store(n, pte, this->bstore);
-        
+              	
     }
     
    if(!pageTable[badvpn].stored){
@@ -351,14 +264,14 @@ AddrSpace::~AddrSpace()
 {    
     unsigned int i;
     for (i = 0; i < numPages; i++){
-        if(pageTable[i].valid=true){
+        if(pageTable[i].valid){
 	mmu->FreePage(pageTable[i].physicalPage);
         }
     }
     delete [] pageTable;
     delete  Executable;
     bstore->~BackingStore();
-   // delete bstore;
+  
 
 }
 
@@ -415,19 +328,11 @@ AddrSpace::Translate(int virtAddr)
 
     vpn = (unsigned) virtAddr / PageSize;
     offset = (unsigned) virtAddr % PageSize;
-//    if (vpn >= numPages) {
-//            return AddressErrorException;
-//       } else if (!pageTable[vpn].valid) {
-//            return PageFaultException;
-//        }
+
         entry = &pageTable[vpn];
 
     pageFrame = entry->physicalPage;
-    if (pageFrame >= NumPhysPages) {
-        DEBUG('a', "*** frame %d > %d!\n", pageFrame, NumPhysPages);
-        return BusErrorException;
-    }
-    entry->use = TRUE;		// set the use, dirty bits
+
 	
     physAddr = pageFrame * PageSize + offset;
         	
@@ -520,9 +425,32 @@ void
 AddrSpace::Evict(){
 
     TranslationEntry *pte;
-    //pte = pt->Evict();
-    pte = ms->ReturnPTE_Rand();
-    pte->valid = FALSE;
+
+       int i;
+        for(i = 0; i < NumPhysPages; i++){
+	TranslationEntry *entry;
+	   entry = ms->Vpn[i].pte;
+        if(entry->use){
+	   ms->Vpn[i].Counter = 0;
+	   entry->use = FALSE;
+	}
+	   else ms->Vpn[i].Counter ++;
+        }
+    //switch(a[0]){
+      switch(algorithm){
+        case 1:
+            pte = ms->ReturnPTE_Rand();
+            break;
+        case 2:
+            pte = ms->ReturnPTE_FIFO();
+            break;
+        case 3:
+            pte = ms->ReturnPTE_LRU();
+            break;
+        default:    
+            pte = ms->ReturnPTE_Rand();
+            break;
+    }    pte->valid = FALSE;
     
     if(pte->dirty)
     {
@@ -542,7 +470,7 @@ AddrSpace::Evict(){
 BackingStore::BackingStore(AddrSpace *as, int pid)
 {   int numpages;
     space = as;
-    //int pid = currentThread->GetPid();// string which will contain the number
+
     sprintf ( filename, "%d", pid); // %d makes the result be a decimal integer
     BSFile = new FileSystem(true);
     numpages = space->GetpageNum();

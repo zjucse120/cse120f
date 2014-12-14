@@ -195,6 +195,7 @@ void Exec_Handler(){
         if(!ReadFile(filename,arg1,128,numpage)){
         printf("Exec fails to read the filename\n");
         machine->WriteRegister(2,0);
+	AdjustPC();
         return;
     } 
             
@@ -261,7 +262,7 @@ Exec(char *filename){
     Thread *thread;
     pid = pt->Alloc(thread);
 
-    if(space->Initialize(executable,pid)){
+    if(space->Initialize(executable, pid)){
 
        thread = new Thread("1",arg4 ,0);
        thread->space = space;

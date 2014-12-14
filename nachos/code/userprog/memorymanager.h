@@ -38,6 +38,7 @@ public:
     void Store(int ppn, TranslationEntry* PTE, BackingStore* bstore);
     TranslationEntry* ReturnPTE_FIFO();
     TranslationEntry* ReturnPTE_Rand();
+    TranslationEntry* ReturnPTE_LRU();
     BackingStore* ReturnBS(int ppn);
     VPN *Vpn;
     List *FIFOlist;

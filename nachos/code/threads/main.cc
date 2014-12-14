@@ -57,6 +57,12 @@
 extern int testnum;
 #endif
 
+
+#ifdef USER_PROGRAM
+char* a;
+extern int algorithm;
+#endif
+
 // External functions used by this file
 
 extern void ThreadTest(void), Copy(char *unixFile, char *nachosFile);
@@ -111,8 +117,34 @@ main(int argc, char **argv)
 #ifdef USER_PROGRAM
         if (!strcmp(*argv, "-x")) {        	// run a user program
             ASSERT(argc > 1);
-            StartProcess(*(argv + 1));
+            if(*(argv+2) != NULL){
+            a = *(argv + 1);
+  switch (a[0]) {
+        case '1':
+            algorithm = 1;
+            break;
+        case '2':
+            algorithm  = 2;
+            break;
+
+        case '3':
+            algorithm  = 3;
+            break;
+
+        default:
+            algorithm = 1;
+            break;
+        }
+      
+ 
+            StartProcess(*(argv + 2));
+       } 
+        else
+               StartProcess(*(argv + 1));
+
             argCount = 2;
+
+              
         } else if (!strcmp(*argv, "-c")) {      // test the console
             if (argc == 1)
                 ConsoleTest(NULL, NULL);

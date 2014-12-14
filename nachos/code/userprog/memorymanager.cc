@@ -53,7 +53,7 @@ MemoryManager::NumPagesCanBeUsed(){
 }
 
 VPN::VPN(){
-
+	Counter = 0;
 }
 
 
@@ -81,6 +81,17 @@ MemoryStore::ReturnPTE_Rand(){
      return Vpn[randompage].pte;
 }
 
+TranslationEntry*
+MemoryStore::ReturnPTE_LRU(){
+    int lrupage = 0;
+    int i = 0;
+    for(i = 0; i < NumPhysPages -1; i++){
+	lrupage = Vpn[i].Counter;
+	if(lrupage < Vpn[i+1].Counter)
+	lrupage = Vpn[i+1].Counter;
+	}
+    return Vpn[lrupage].pte;
+}
 
 BackingStore*
 MemoryStore::ReturnBS(int ppn){
