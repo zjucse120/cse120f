@@ -4,7 +4,9 @@
 #endif
 #include "copyright.h"
 #include "system.h"
-
+#include "sysdep.h"
+class VPN;
+class MemoryStore;
 MemoryManager::MemoryManager(int numPages)
 {
     Num_Pages = numPages;
@@ -18,7 +20,7 @@ MemoryManager::AllocPage(){
     MM_lock->Acquire();
     int i;
     i = bitmap->Find();
-    if(i>0)
+    if(i>=0)
     bitmap->Mark(i);
     MM_lock->Release();
     return i;
@@ -49,3 +51,41 @@ MemoryManager::NumPagesCanBeUsed(){
     MM_lock->Release();
     return count;
 }
+
+VPN::VPN(){
+
+}
+
+
+MemoryStore::MemoryStore(int phypageNum){
+    Vpn = new VPN[phypageNum];
+    FIFOlist = new List;
+    
+}
+
+void MemoryStore::Store(int ppn, TranslationEntry* PTE, BackingStore* bstore){
+     Vpn[ppn].pte = PTE;
+     Vpn[ppn].bs = bstore;
+     FIFOlist->Append((void*)Vpn[ppn].pte);       
+}
+
+TranslationEntry*
+MemoryStore::ReturnPTE_FIFO(){
+return (TranslationEntry *)FIFOlist->Remove();
+}
+
+TranslationEntry*
+MemoryStore::ReturnPTE_Rand(){
+     int randompage;
+     randompage = Random() % NumPhysPages;
+     return Vpn[randompage].pte;
+}
+
+
+BackingStore*
+MemoryStore::ReturnBS(int ppn){
+    return Vpn[ppn].bs;
+}
+
+
+

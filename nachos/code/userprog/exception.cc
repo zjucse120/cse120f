@@ -258,13 +258,13 @@ Exec(char *filename){
       
     AddrSpace *space;
     space = new AddrSpace(executable);    
-    
-    if(space->Initialize(executable)){
+    Thread *thread;
+    pid = pt->Alloc(thread);
 
-       Thread *thread;
+    if(space->Initialize(executable,pid)){
+
        thread = new Thread("1",arg4 ,0);
        thread->space = space;
-       pid = pt->Alloc(thread);
       if(pid == 0){
            //delete executable;
            delete thread;

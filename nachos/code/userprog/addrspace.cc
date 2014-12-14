@@ -27,6 +27,7 @@
 
 extern MemoryManager *mmu;
 extern ProcessTable *pt;
+extern MemoryStore *ms;
 class BackingStore;
 //Statistics *stats;
 //----------------------------------------------------------------------
@@ -56,11 +57,11 @@ SwapHeader (NoffHeader *noffH)
 //
 //---------------------------------------------------------------------
 int
-AddrSpace::Initialize(OpenFile *executable)
+AddrSpace::Initialize(OpenFile *executable,int pid)
 {
     unsigned int i;
     unsigned int size;
-    bstore =  new BackingStore(this);
+    bstore =  new BackingStore(this, pid);
  /*   int code_file_off, code_virt_addr, code_size, code_size_load;
 
     int data_file_off, data_virt_addr, data_size, data_size_load;*/
@@ -219,15 +220,18 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
         TranslationEntry * pte;
         pte = &pageTable[badvpn];
         pageTable[badvpn].physicalPage = n;// now, allocate the phys page
-        pt->PageStore(pte);
+        //pt->PageStore(pte);
+        ms->Store(n, pte, this->bstore);
+        
     }
     
    if(!pageTable[badvpn].stored){
     code_pn = (noffH.code.virtualAddr + noffH.code.size)/PageSize;
     data_pn = (noffH.initData.virtualAddr + noffH.initData.size)/PageSize;
-       
-  if((badvpn <= code_pn) || (badvpn<= data_pn)){
-	    stats->numPageIns ++ ;
+    
+   if((code_pn >= badvpn && noffH.code.size>0) || (data_pn >= badvpn && code_pn <= badvpn && noffH.initData.size>0)) 
+        stats->numPageIns ++;
+  
          DEBUG('a', "One pagein happened, %d total.\n",stats->numPageIns);	    	
          if(code_pn >= badvpn){
          if (noffH.code.size > 0) {	
@@ -297,7 +301,7 @@ AddrSpace::DemandSpace(OpenFile *executable, int badvpn)
             }
         }
     }
-}    
+   
            else if (data_pn < badvpn){
          	memset(&(machine->mainMemory[pageTable[badvpn].physicalPage*PageSize]),0,sizeof(PageSize));
                    }
@@ -353,6 +357,8 @@ AddrSpace::~AddrSpace()
     }
     delete [] pageTable;
     delete  Executable;
+    bstore->~BackingStore();
+   // delete bstore;
 
 }
 
@@ -514,13 +520,15 @@ void
 AddrSpace::Evict(){
 
     TranslationEntry *pte;
-    pte = pt->Evict();
-
+    //pte = pt->Evict();
+    pte = ms->ReturnPTE_Rand();
     pte->valid = FALSE;
-   // TranslationEntry *pte;
+    
     if(pte->dirty)
     {
-      bstore->PageOut(pte);
+      BackingStore *bs;
+      bs = ms->ReturnBS(pte->physicalPage);
+      bs->PageOut(pte);
       stats->numPageOuts ++;
       DEBUG('a', "One pageout happened, %d total.\n", stats->numPageOuts);
       printf("pageouts %d\n", stats->numPageOuts);
@@ -531,10 +539,10 @@ AddrSpace::Evict(){
     
 }
 
-BackingStore::BackingStore(AddrSpace *as)
+BackingStore::BackingStore(AddrSpace *as, int pid)
 {   int numpages;
     space = as;
-    int pid = currentThread->GetPid();// string which will contain the number
+    //int pid = currentThread->GetPid();// string which will contain the number
     sprintf ( filename, "%d", pid); // %d makes the result be a decimal integer
     BSFile = new FileSystem(true);
     numpages = space->GetpageNum();
@@ -544,6 +552,10 @@ BackingStore::BackingStore(AddrSpace *as)
 
 }
 
+BackingStore::~BackingStore(){
+   delete BSFile;
+   delete BSExec;
+}
 
 void
 BackingStore::PageOut(TranslationEntry *pte)

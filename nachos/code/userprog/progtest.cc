@@ -24,28 +24,31 @@
 MemoryManager * mmu;
 ProcessTable *pt;
 SynchConsole *synchCons;
+MemoryStore * ms;
 
 
 void
 StartProcess(char *filename)
 {
-    int mainpid;
-    OpenFile *executable = fileSystem->Open(filename);
-    AddrSpace *space;
-    mmu = new MemoryManager(NumPhysPages);
-    pt = new ProcessTable(ProcTableSize);
+int mainpid;
+OpenFile *executable = fileSystem->Open(filename);
+AddrSpace *space;
+mmu = new MemoryManager(NumPhysPages);
+pt = new ProcessTable(ProcTableSize); 
+ms =new MemoryStore(NumPhysPages);
     synchCons = new SynchConsole(NULL,NULL);
     if (executable == NULL) {
         printf("Unable to open file %s\n", filename);
         return;
     }
-    
+   
+    mainpid = pt->Alloc(currentThread); 
+    currentThread->SetPid(mainpid); 
     space = new AddrSpace(executable); 
-    if(space->Initialize(executable));
- 
+    if(space->Initialize(executable,mainpid));
+
     currentThread->space = space;
-    mainpid = pt->Alloc(currentThread);
-    currentThread->SetPid(mainpid);
+ 
 
  //    delete executable;			// close file
 

@@ -25,7 +25,7 @@ class BackingStore;
 
 class AddrSpace {
 public:
-    int Initialize(OpenFile *executable);
+    int Initialize(OpenFile *executable, int pid);
     bool DemandSpace(OpenFile *executable, int badvpn);
     OpenFile *Executable;
     NoffHeader noffH;
@@ -65,7 +65,9 @@ class BackingStore{
 
 public:
 
-BackingStore(AddrSpace *as);
+BackingStore(AddrSpace *as, int pid);
+
+~BackingStore();
 
 void PageOut(TranslationEntry *pte);
 
